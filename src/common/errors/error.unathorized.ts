@@ -1,24 +1,23 @@
-import HttpException, { ErrorOutput } from "./custom.apiError";
-import { StatusCodes } from "http-status-codes"
+import HttpException, { ErrorOutput } from './custom.apiError';
+import { StatusCodes } from 'http-status-codes';
 
-
-class Unauthorized extends HttpException {
-
-
-    constructor(message: string) {
-        super(message, StatusCodes.FORBIDDEN, "Forbidden Access")
+class ForbiddenError extends HttpException {
+    constructor(message: string = 'You do not have permission to perform this action.') {
+        super(message, StatusCodes.FORBIDDEN, 'FORBIDDEN');
     }
 
     serializeErrors(): ErrorOutput[] {
-            return [{
+        return [
+            {
                 message: this.message,
                 status: this.statusCode,
-                extension: { 
-                    details: 'Authentication credentials (e.g., JWT) were missing or invalid.'
-                }
-            }];
-        }
-
+                code: this.errorCode,
+                extension: {
+                    details: 'Your account does not have the required permissions.',
+                },
+            },
+        ];
+    }
 }
 
-export default Unauthorized;
+export default ForbiddenError;
