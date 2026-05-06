@@ -1,10 +1,10 @@
 import { PrismaClient } from '@prisma/client';
-import { env } from './env';
 import { logger } from './logger';
+import { config } from './env';
 
 export const prisma = new PrismaClient({
   log:
-    env.NODE_ENV === 'development'
+    config.app.env === 'development'
       ? [
           { emit: 'event', level: 'query' },
           { emit: 'event', level: 'error' },
@@ -13,7 +13,7 @@ export const prisma = new PrismaClient({
       : [{ emit: 'event', level: 'error' }],
 });
 
-if (env.NODE_ENV === 'development') {
+if (config.app.env === 'development') {
   prisma.$on('query' as never, (e: any) => {
     logger.debug({ query: e.query, params: e.params, duration: e.duration }, 'prisma:query');
   });

@@ -4,16 +4,16 @@ import { config } from './env';
 
 class RedisServer {
 
-   private client: Redis | null;
-   public isConnected: boolean = false;
+    private client: Redis | null;
+    public isConnected: boolean = false;
 
-   constructor() {
-     this.client = null;
-     this.isConnected = false;
-   }
+    constructor() {
+        this.client = null;
+        this.isConnected = false;
+    }
 
 
-   //REDIS INSTANCE 
+    //REDIS INSTANCE 
     private get redis(): Redis {
         if (!this.client) {
             throw new Error("Redis client not initialized. Call connect() first.");
@@ -59,10 +59,10 @@ class RedisServer {
             logger.info('⚠️  Redis: Connection ended');
             this.isConnected = false;
         });
-      }
+    }
 
 
-       async connect() {
+    async connect() {
         try {
             // Create Redis client with configuration
             this.client = new Redis({
@@ -108,7 +108,7 @@ class RedisServer {
             logger.error({ errorMessage }, 'Failed to connect to Redis');
             throw error;
         }
-        
+
     }
 
     async testConnection() {
