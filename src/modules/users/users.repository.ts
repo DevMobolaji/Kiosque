@@ -24,10 +24,6 @@ export class UsersRepository {
     });
   }
 
-  /**
-   * Includes soft-deleted users — used during registration to detect
-   * "is this email taken or just freed up?"
-   */
   async findByEmailIncludingDeleted(email: string, tx?: Prisma.TransactionClient): Promise<User | null> {
     return (tx ?? prisma).user.findUnique({
       where: { email: email.toLowerCase() },

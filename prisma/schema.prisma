@@ -113,6 +113,12 @@ enum ShipmentStatus {
   FAILED
 }
 
+enum AuditStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
 // =====================================================================
 // DOMAIN 01 — IDENTITY
 // users · sessions · addresses · audit_logs
@@ -133,6 +139,7 @@ model User {
   lastLoginAt                  DateTime? @map("last_login_at") @db.Timestamptz()
   failedLoginAttempts          Int @map("failed_login_attempts") @default(0)
   lockedUntil                  DateTime? @map("locked_until") @db.Timestamptz()
+  emailVerified                Boolean @default(false) @map("is_verified")
   emailVerifiedAt              DateTime? @map("email_verified_at") @db.Timestamptz()
   passwordChangedAt            DateTime? @map("password_changed_at") @db.Timestamptz()
   avatarUrl      String?   @map("avatar_url") @db.VarChar(500)
@@ -201,18 +208,20 @@ model Address {
 
 model AuditLog {
   id            BigInt    @id @default(autoincrement())
-  actorUserId   String?   @map("actor_user_id") @db.Uuid
+  userId        String?   @map("user_id") @db.Uuid
   action        String    @db.VarChar(100)
+  status        AuditStatus @default(SUCCESS) @map("status")
   resourceType  String    @map("resource_type") @db.VarChar(50)
   resourceId    String    @map("resource_id") @db.Uuid
   metadata      Json?
   ipAddress     String?   @map("ip_address") @db.Inet
   userAgent     String?   @map("user_agent") @db.VarChar(500)
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  
 
-  actor User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([actorUserId])
+  @@index([userId])
   @@index([resourceType, resourceId])
   @@index([createdAt])
   @@map("audit_logs")

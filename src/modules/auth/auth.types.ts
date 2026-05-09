@@ -1,4 +1,5 @@
 import { UserRole } from "@prisma/client";
+import { RequestContext } from "interfaces/request.interface";
 
 export interface RegisterResult {
   success: true;
@@ -10,8 +11,7 @@ export interface RegisterInput {
   password: string;
   firstName: string;
   lastName: string;
-  ipAddress?: string;
-  userAgent?: string;
+  context: RequestContext;
 }
 
 export interface SafeUser {
