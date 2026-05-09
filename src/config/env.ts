@@ -1,10 +1,7 @@
-// src/config/env.ts
-
 import { z } from "zod";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 
-/**
- * Schema
- */
 const envSchema = z.object({
   // App
   PORT: z.coerce.number().default(3000),
@@ -13,7 +10,7 @@ const envSchema = z.object({
   ENVIRONMENT: z.enum(["development", "production", "test"]).default("development"),
 
   // Database
-  DATABASE_URL: z.string(), //will later change to .url() with proper validation, but for now just ensure it's a string and present
+  DATABASE_URL: z.string(),
 
   // Redis
   REDIS_HOST: z.string().default("localhost"),
@@ -23,11 +20,15 @@ const envSchema = z.object({
   REDIS_ENABLE_READY_CHECK: z.coerce.boolean().default(true),
   REDIS_ENABLE_OFFLINE_QUEUE: z.coerce.boolean().default(true),
 
-  // JWT
-  JWT_ACCESS_SECRET: z.string().min(32),
-  JWT_REFRESH_SECRET: z.string().min(32),
+  // JWT — RS256 asymmetric
+  JWT_PRIVATE_KEY_PATH: z.string().optional(),
+  JWT_PUBLIC_KEY_PATH: z.string().optional(),
+  JWT_PRIVATE_KEY: z.string().optional(),
+  JWT_PUBLIC_KEY: z.string().optional(),
   JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
   JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
+  JWT_ISSUER: z.string().default("kiosque"),
+  JWT_AUDIENCE: z.string().default("kiosque-api"),
 
   // Logging
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("debug"),
@@ -43,14 +44,29 @@ const envSchema = z.object({
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(100),
 });
 
-/**
- * Validation (fail-fast)
- */
 const parsed = envSchema.parse(process.env);
 
 /**
- * Typed config object
+ * Load JWT keys from either file path (dev) or raw env value (production).
+ * Throws fast at startup if keys are missing — better than mysterious 500s later.
  */
+function loadKey(directValue: string | undefined, pathValue: string | undefined, label: string): string {
+  if (directValue && directValue.trim().length > 0) {
+    return directValue.replace(/\\n/g, "\n");
+  }
+  if (pathValue) {
+    try {
+      return readFileSync(resolve(pathValue), "utf-8");
+    } catch (err) {
+      throw new Error(`Failed to read ${label} from ${pathValue}: ${(err as Error).message}`);
+    }
+  }
+  throw new Error(`${label} is missing — set either JWT_${label}_KEY or JWT_${label}_KEY_PATH`);
+}
+
+const jwtPrivateKey = loadKey(parsed.JWT_PRIVATE_KEY, parsed.JWT_PRIVATE_KEY_PATH, "PRIVATE");
+const jwtPublicKey = loadKey(parsed.JWT_PUBLIC_KEY, parsed.JWT_PUBLIC_KEY_PATH, "PUBLIC");
+
 export const config = {
   app: {
     port: parsed.PORT,
@@ -74,10 +90,13 @@ export const config = {
   },
 
   jwt: {
-    accessSecret: parsed.JWT_ACCESS_SECRET,
-    refreshSecret: parsed.JWT_REFRESH_SECRET,
+    privateKey: jwtPrivateKey,
+    publicKey: jwtPublicKey,
     accessExpiresIn: parsed.JWT_ACCESS_EXPIRES_IN,
     refreshExpiresIn: parsed.JWT_REFRESH_EXPIRES_IN,
+    issuer: parsed.JWT_ISSUER,
+    audience: parsed.JWT_AUDIENCE,
+    algorithm: "RS256" as const,
   },
 
   logging: {
@@ -94,7 +113,4 @@ export const config = {
   },
 } as const;
 
-/**
- * Type export
- */
 export type Env = z.infer<typeof envSchema>;

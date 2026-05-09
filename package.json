@@ -24,6 +24,7 @@
     "@bull-board/api": "^7.0.0",
     "@bull-board/express": "^7.0.0",
     "@prisma/client": "6",
+    "argon2": "^0.44.0",
     "bcrypt": "^5.1.1",
     "bullmq": "^5.34.0",
     "compression": "^1.7.5",
@@ -37,7 +38,6 @@
     "ioredis": "^5.4.2",
     "jsonwebtoken": "^9.0.2",
     "pino": "^9.5.0",
-    "pino-http": "^10.5.0",
     "uuid": "^11.0.3",
     "zod": "^3.24.1"
   },
