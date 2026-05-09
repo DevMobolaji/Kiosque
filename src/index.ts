@@ -1,8 +1,9 @@
 import 'dotenv/config';
 import App from './app';
 import { config } from './config/env';
+import AuthController from './modules/auth/auth.controller';
 
-const app = new App([], Number(config.app.port));
+const app = new App([new AuthController()], Number(config.app.port));
 
 const start = async () => {
   await app.initialize();

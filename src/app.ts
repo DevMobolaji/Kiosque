@@ -4,18 +4,20 @@ import cors from 'cors';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
-import pinoHttp from 'pino-http';
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 
-import Controller from '@/config/interfaces/controller.interface';
+import Controller from 'interfaces/controller.interface';
 import { config } from '@/config/env';
 import { logger } from '@/config/logger';
 import { connectDatabase, disconnectDatabase, prisma } from '@/config/database';
 import { redisServer } from '@/config/redis';
 import { queues, closeAllQueues } from '@/infrastructure/queues';
 import ErrorMiddleware from '@/common/middleware/error.handler';
+import { attachContextMiddleware } from './common/middleware/context.middlware';
+import { requestLogger } from './common/middleware/request-logger';
+import { requestIdMiddleware } from './common/middleware/request-id-middleware';
 
 class App {
   public express: Application;
@@ -23,14 +25,15 @@ class App {
   private server: ReturnType<Application['listen']> | null = null;
   private isShuttingDown: boolean = false;
 
+
+
   constructor(controllers: Controller[], port: number) {
     this.express = express();
     this.port = port;
 
     this.initializeSecurityMiddleware();
     this.initializeParsingMiddleware();
-    this.initializeLoggingMiddleware();
-    this.initializeCustomMiddleware();
+    this.initializeRequestLogging();
     this.initializeHealthChecks();
     this.initializeBullBoard();
     this.initializeRoutes(controllers);
@@ -80,6 +83,7 @@ class App {
    */
   private initializeSecurityMiddleware(): void {
     this.express.disable('x-powered-by');
+    this.express.set('trust proxy', 1);
 
     this.express.use(
       helmet({
@@ -126,31 +130,10 @@ class App {
    * LOGGING — pino-http, request id, response time
    * ================================================
    */
-  private initializeLoggingMiddleware(): void {
-    this.express.use(
-      pinoHttp({
-        logger,
-        customLogLevel: (_req, res, err) => {
-          if (res.statusCode >= 500 || err) return 'error';
-          if (res.statusCode >= 400) return 'warn';
-          return 'info';
-        },
-        customSuccessMessage: (req, res) => `${req.method} ${req.url} ${res.statusCode}`,
-        customErrorMessage: (req, res, err) =>
-          `${req.method} ${req.url} ${res.statusCode} ${err.message}`,
-      })
-    );
-  }
-
-  /**
-   * ================================================
-   * CUSTOM — placeholder for app-wide middleware
-   * (auth, audit, idempotency mount per-route, not globally)
-   * ================================================
-   */
-  private initializeCustomMiddleware(): void {
-    // Reserved for cross-cutting concerns added at the app level.
-    // Per-route middleware (auth, roles, idempotency) wires inside route files.
+  private initializeRequestLogging(): void {
+    this.express.use(requestIdMiddleware);
+    this.express.use(attachContextMiddleware);
+    this.express.use(requestLogger);
   }
 
   /**
